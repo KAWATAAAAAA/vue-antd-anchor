@@ -1,6 +1,11 @@
 <template>
   <div id="app">
-    <Anchor :nav-list="navList" :scroll-view="false" :label-name="labelName" :lazy="true">
+    <Anchor
+      :nav-list="navList"
+      :scroll-view="false"
+      :label-name="labelName"
+      :lazy="true"
+    >
       <Header></Header>
       <Body></Body>
       <Footer></Footer>
@@ -22,17 +27,17 @@ export default {
     Body,
     Footer
   },
-  data(){
+  data() {
     return {
-      navList:[],
-      labelName:["Header","Body","Footer"]
-    }
+      navList: [],
+      labelName: ["Header", "Body", "Footer"]
+    };
   }
 };
 </script>
 
 <style lang="scss">
-*{
+* {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -43,6 +48,5 @@ export default {
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
   color: #2c3e50;
-
 }
 </style>
