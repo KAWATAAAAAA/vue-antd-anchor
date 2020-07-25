@@ -68,14 +68,14 @@ export default {
           "[object Boolean]": () => {
             if (this.lazyStore) {
               /* 出生记录 */
-              //_bornChildComponent.add(this.$slots.default[0])
+              _that.bornChildComponent.push(0)
               return [this.$slots.default[0]];
             } else {
-              return this.$slots.default;
+              _that.bornChildComponent = new Array(_that.$slots.default.length).fill(0).map((item, index) => index)
+              return _that.$slots.default;
             }
           },
           "[object Array]": () => {
-            
             return _that.$slots.default.filter((item,index) => _that.lazyStore.includes(index) )
           }
         };
@@ -155,6 +155,7 @@ export default {
           });
 
           this.lazyStore = newArr;
+          this.bornChildComponent = JSON.parse(JSON.stringify(newArr))
         }
       };
       ACTIONS[Object.prototype.toString.call(this.lazy)]();

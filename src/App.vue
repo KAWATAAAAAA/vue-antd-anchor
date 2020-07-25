@@ -3,7 +3,7 @@
     <Anchor
       :scroll-view="false"
       :label-name="labelName"
-      :lazy="[0,3]"
+      :lazy="true"
       @onClick="handleViewNodeChange"
       @onAllDone="handleLazyLoadAllDone"
       @onScrolling="handleScrolling"
