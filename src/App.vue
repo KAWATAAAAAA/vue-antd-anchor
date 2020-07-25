@@ -1,10 +1,13 @@
 <template>
   <div id="app">
     <Anchor
-      :nav-list="navList"
       :scroll-view="false"
       :label-name="labelName"
-      :lazy="true"
+      :lazy="[0,3]"
+      @onClick="handleViewNodeChange"
+      @onAllDone="handleLazyLoadAllDone"
+      @onScrolling="handleScrolling"
+      @onScrolled="handleScrolled"
     >
       <Header></Header>
       <Body></Body>
@@ -19,6 +22,9 @@ import Anchor from "./components/anchor";
 import Header from "./components/Header";
 import Body from "./components/Body";
 import Footer from "./components/Footer";
+
+import prettierLog from "./utils/log"
+console.log(prettierLog)
 export default {
   name: "App",
   components: {
@@ -29,9 +35,22 @@ export default {
   },
   data() {
     return {
-      navList: [],
       labelName: ["Header", "Body", "Footer"]
     };
+  },
+  methods:{
+    handleViewNodeChange(node,index){
+      console.log(node,index)
+    },
+    handleLazyLoadAllDone(){
+      prettierLog.default("all done")
+    },
+    handleScrolling(){
+      prettierLog.danger("scrolling...")
+    },
+    handleScrolled(){
+      prettierLog.success("scrolled")
+    },
   }
 };
 </script>

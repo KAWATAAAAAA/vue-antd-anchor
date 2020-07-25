@@ -51,7 +51,6 @@ export default {
   computed: {
     _childComponentLazyLoadMarkInitFactory: {
       get: function() {
-        console.log("触发了计算属性！！！！")
         /**
          * @懒加载规则
          *
@@ -76,6 +75,7 @@ export default {
             }
           },
           "[object Array]": () => {
+            
             return _that.$slots.default.filter((item,index) => _that.lazyStore.includes(index) )
           }
         };
@@ -89,33 +89,30 @@ export default {
   },
   data() {
     return {
-      blockList: [],
+
       /* 生效样式列表 */
       commonClassList: [],
       /* 用于节流 scroll 事件 */
       scrollTimer: "",
-      /* 标识滚动事件是否完成 */
-      isScrollDone: false,
+      /* 标识滚动事件是否完成 ,false 为正在滚动，true为滚动完成*/
+      isScrollDone: "",
+      /* 深拷贝Lazy中间件，用以触发 computed属性 */
       lazyStore: "",
+      /* 出生证明 */
       bornChildComponent: []
     };
   },
   watch: {
     /* 当做钩子函数，在值发生改变后做些什么 */
     isScrollDone(newval) {
-      if (newval) {
-        console.log("scrolled");
-      } else {
-        console.log("scrolling");
-      }
+      newval?this.$emit("onScrolled"):this.$emit("onScrolling")
     },
     bornChildComponent(){
-      this.$nextTick(() => {
-        this.initDefaultSoltComponents()
-      })
+      this.bornChildComponent.length === this.$slots.default.length?this.$emit("onAllDone"):undefined
     }
   },
   created() {
+    /* render函数未执行之前，先将传过来的 Lazy执行深克隆 */
     this._cloneDeepPropLazy();
   },
   mounted() {
@@ -127,62 +124,21 @@ export default {
     /* 监听本组件顶级 wrapper */
     this.initListenerWrapper();
 
-    /* 模板渲染完成后[必须]，侵入传入的组件，加上预设class，注入占位input */
-    this.initDefaultSoltComponents();
-
-    /* 模板渲染完成后[必须]，侵入完成v-for渲染的label标签,加上for*/
-    this.initCreatedLabel();
-
   },
   methods: {
-    initDefaultSoltComponents() {
-      console.log(this.$slots.default);
 
-      this.blockList = this.$slots.default;
-
-      /* 近似危险的操作，在该组件中改变了传入组件的属性  [ 而非状态 ] */
-      /* 如果子 VNode 中存在 elm 说明元素已经渲染到页面，执行初始化注入 */
-      this.$slots.default
-        .filter(item => item.elm)
-        .map(item => {
-          /* 默认传入的组件添加样式 */
-          
-          if(item.elm.children.length === 0){
-            item.elm.classList.add("block-wrapper");
-            
-            /* 默认传入的组件中注入 input 标签  */
-            let input = document.createElement("input");
-            /* 默认使用 vue tag作为占位 input 的 id */
-            input.setAttribute("id", item.tag);
-            input.classList.add("invisible-input-placeholder");
-
-            item.elm.appendChild(input);
-          }
-          
-        });
-    },
-    initCreatedLabel() {
-      /* 取代在 v-for 中直接使用 :for="" ,因为此时 mounted 还未注入 tag */
-
-      let labelList = document.querySelectorAll(
-        ".nav-line > [data-unique='nav-label']"
-      );
-
-      this.blockList.map((item, index) => {
-        labelList[index].setAttribute("for", item.tag);
-      });
-    },
     initClassConfig() {
       /* 指定本组件wrapper 是否允许溢出 */
       this.scrollView ? this.commonClassList.push("scroll-view") : undefined;
     },
     initListenerWrapper() {
+      let _that = this
       this.$refs["scroll-wrapper"].addEventListener("scroll", () => {
         /*  scroll 节流，完成后传递完成状态 */
-        this.isScrollDone = false;
-        clearTimeout(this.scrollTimer);
-        this.scrollTimer = setTimeout(() => {
-          this.isScrollDone = true;
+        _that.isScrollDone = false;
+        clearTimeout(_that.scrollTimer);
+        _that.scrollTimer = setTimeout(() => {
+          _that.isScrollDone = true;
         }, 100);
       });
     },
@@ -197,6 +153,7 @@ export default {
           this.lazy.forEach(item => {
             newArr.push(item);
           });
+
           this.lazyStore = newArr;
         }
       };
@@ -205,38 +162,45 @@ export default {
     _wakeUpLazyLoadComponent(active_index) {
       /* 遍历 default slot 中的子组件，提取出出生状态的VNode */
 
-
+      /* 若非懒加载模式，则退出该函数 */
+      if(!this.lazy){
+        return
+      }
       /* 由于各种原因，导致入参为 Event 事件，就只好利用这种办法来获取点击到的 index */
+      /* render 函数中已提供 key 属性 */
       let currentIndex = parseInt(active_index.target.getAttribute("key"));
-      
-      /* let born = [];
-      this.$slots.default.forEach((item, index) => {
-        item.elm ? born.push(index) : undefined;
-      }); */
-
+    
       /* 出生证明 */
       this.bornChildComponent.push(currentIndex)
+
       /* 跨类型修改 传入的拷贝 lazy */
       if(typeof this.lazyStore === "boolean"){
-        this.lazyStore = [currentIndex]
+        this.lazyStore = [0,currentIndex]
       } else if(Array.isArray(this.lazyStore)){
         this.lazyStore.push(currentIndex)
       }
     
       /* 预计在此提供一个钩子函数 */
+    },
+    _scrollToElmView(active_index){
+      let currentIndex = parseInt(active_index.target.getAttribute("key"));
+       this.$slots.default[currentIndex].elm.scrollIntoView({
+        behavior: "smooth"
+      })
+      /* 点击事件钩子 */
+      this.$emit("onClick",this.$slots.default[currentIndex].child,currentIndex)
     }
 
   },
   render(h) {
-    //let _bornChildComponent = new Set();
-    
+  
     const _injectLabel = () => {
-        console.log(this._self)
-        let _that = this._self
+        
+      let _that = this._self
       return Array.apply(null, { length: _that.labelName.length }).map(
         (item, index) => {
           return h(
-            "label",
+            "li",
             {
               attrs: {
                 "data-unique": "nav-label",
@@ -246,8 +210,11 @@ export default {
               key: index,
               on:{
                   "~click": (index) => {     
-                        _that._wakeUpLazyLoadComponent(index)
-                    }
+                    _that._wakeUpLazyLoadComponent(index)
+                  },
+                  "click":(index) => {
+                    _that._scrollToElmView(index)
+                  }
                 }
             },
             [_that.labelName[index]]
@@ -270,9 +237,9 @@ export default {
         ref: "scroll-wrapper"
       },
       [
-        //...this.$slots.default, // 子节点槽位
+        /* ...this.$slots.default 子节点槽位，直接解构则不是懒加载 */
         ...this._childComponentLazyLoadMarkInitFactory,
-        h("div", { attrs: { class: "nav-line" } }, _injectLabel())
+        h("ul", { attrs: { class: "nav-line" } }, _injectLabel())
       ]
     );
   }
@@ -292,20 +259,12 @@ export default {
   overflow: hidden;
   position: relative;
 }
-::v-deep .block-wrapper > .invisible-input-placeholder {
-  position: absolute;
-  top: 0;
-  height: 100%;
-  width: 1px;
-  border: 0;
-  padding: 0;
-  margin: 0;
-  clip: rect(0 0 0 0);
-}
+
 .scroll-view {
   overflow: auto;
 }
 .nav-line {
+
   width: 100px;
   height: 100vh;
 
@@ -320,7 +279,8 @@ export default {
   justify-content: space-around;
   align-items: center;
 
-  > label {
+  > li {
+    display: block;
     &:hover {
       cursor: pointer;
     }
