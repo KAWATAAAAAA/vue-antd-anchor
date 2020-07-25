@@ -51,6 +51,7 @@ export default {
   computed: {
     _childComponentLazyLoadMarkInitFactory: {
       get: function() {
+        console.log("触发了计算属性！！！！")
         /**
          * @懒加载规则
          *
@@ -63,6 +64,7 @@ export default {
          * @param [Array]
          * 若传入的值为 Array 则遍历该数组将对应下标的子组件置为 lazy load
          */
+        let _that = this
         const ACTIONS = {
           "[object Boolean]": () => {
             if (this.lazyStore) {
@@ -73,11 +75,15 @@ export default {
               return this.$slots.default;
             }
           },
-          "[object Array]": () => {}
+          "[object Array]": () => {
+            return _that.$slots.default.filter((item,index) => _that.lazyStore.includes(index) )
+          }
         };
-        // 此处 || 永远会执行左值
-        //return ACTIONS[Object.prototype.toString.call(this.lazy)]() || this._bornChildComponent;
-        return ACTIONS[Object.prototype.toString.call(this.lazyStore)]();
+        // 此处 || 永远会执行左值,vue 不会触发计算属性
+        //return ACTIONS[Object.prototype.toString.call(this.lazy)]() || this.bornChildComponent;
+
+        /* 逗号表达式，能使表达式两边语句都执行，并且最终返回右值 */
+        return  this.bornChildComponent.length,ACTIONS[Object.prototype.toString.call(this.lazyStore)]();
       }
     }
   },
@@ -90,7 +96,8 @@ export default {
       scrollTimer: "",
       /* 标识滚动事件是否完成 */
       isScrollDone: false,
-      lazyStore: ""
+      lazyStore: "",
+      bornChildComponent: []
     };
   },
   watch: {
@@ -101,6 +108,11 @@ export default {
       } else {
         console.log("scrolling");
       }
+    },
+    bornChildComponent(){
+      this.$nextTick(() => {
+        this.initDefaultSoltComponents()
+      })
     }
   },
   created() {
@@ -109,17 +121,18 @@ export default {
   mounted() {
     /* 挂载完毕，表示模板中的 v-for已经完成渲染 */
 
+    /* 组件外层wrapper 设定默认样式 */
+    this.initClassConfig();
+
+    /* 监听本组件顶级 wrapper */
+    this.initListenerWrapper();
+
     /* 模板渲染完成后[必须]，侵入传入的组件，加上预设class，注入占位input */
     this.initDefaultSoltComponents();
 
     /* 模板渲染完成后[必须]，侵入完成v-for渲染的label标签,加上for*/
     this.initCreatedLabel();
 
-    this.initClassConfig();
-    //console.log(this.blockList[0].tag)
-
-    /* 监听本组件顶级 wrapper */
-    this.initListenerWrapper();
   },
   methods: {
     initDefaultSoltComponents() {
@@ -133,15 +146,19 @@ export default {
         .filter(item => item.elm)
         .map(item => {
           /* 默认传入的组件添加样式 */
-          item.elm.classList.add("block-wrapper");
+          
+          if(item.elm.children.length === 0){
+            item.elm.classList.add("block-wrapper");
+            
+            /* 默认传入的组件中注入 input 标签  */
+            let input = document.createElement("input");
+            /* 默认使用 vue tag作为占位 input 的 id */
+            input.setAttribute("id", item.tag);
+            input.classList.add("invisible-input-placeholder");
 
-          /* 默认传入的组件中注入 input 标签  */
-          let input = document.createElement("input");
-          /* 默认使用 vue tag作为占位 input 的 id */
-          input.setAttribute("id", item.tag);
-          input.classList.add("invisible-input-placeholder");
-
-          item.elm.appendChild(input);
+            item.elm.appendChild(input);
+          }
+          
         });
     },
     initCreatedLabel() {
@@ -186,17 +203,27 @@ export default {
       ACTIONS[Object.prototype.toString.call(this.lazy)]();
     },
     _wakeUpLazyLoadComponent(active_index) {
-      //active_index
       /* 遍历 default slot 中的子组件，提取出出生状态的VNode */
-        console.log(active_index.target.getAttribute("key"))
-        
-        //console.log(event)
-      let born = [];
+
+
+      /* 由于各种原因，导致入参为 Event 事件，就只好利用这种办法来获取点击到的 index */
+      let currentIndex = parseInt(active_index.target.getAttribute("key"));
+      
+      /* let born = [];
       this.$slots.default.forEach((item, index) => {
         item.elm ? born.push(index) : undefined;
-      });
+      }); */
+
+      /* 出生证明 */
+      this.bornChildComponent.push(currentIndex)
+      /* 跨类型修改 传入的拷贝 lazy */
+      if(typeof this.lazyStore === "boolean"){
+        this.lazyStore = [currentIndex]
+      } else if(Array.isArray(this.lazyStore)){
+        this.lazyStore.push(currentIndex)
+      }
     
-      //console.log(born);
+      /* 预计在此提供一个钩子函数 */
     }
 
   },
