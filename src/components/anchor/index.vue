@@ -99,7 +99,14 @@ export default {
       /* 深拷贝Lazy中间件，用以触发 computed属性 */
       lazyStore: "",
       /* 出生证明 */
-      bornChildComponent: []
+      bornChildComponent: [],
+
+      /* ink小圆点中间变量 */
+      lastActiveIndex: 1,
+      currentActiveIndex: 1,
+
+      /* xOb */
+      xOb:""
     };
   },
   watch: {
@@ -109,11 +116,16 @@ export default {
     },
     bornChildComponent(){
       this.bornChildComponent.length === this.$slots.default.length?this.$emit("onAllDone"):undefined
+    
     }
   },
   created() {
     /* render函数未执行之前，先将传过来的 Lazy执行深克隆 */
     this._cloneDeepPropLazy();
+  },
+
+  updated(){
+    this.initAddIntersectionListener()
   },
   mounted() {
     /* 挂载完毕，表示模板中的 v-for已经完成渲染 */
@@ -123,6 +135,9 @@ export default {
 
     /* 监听本组件顶级 wrapper */
     this.initListenerWrapper();
+
+    /* 交叉观察者监听页面元素是否进入viewport */
+    this.initAddIntersectionListener()
 
   },
   methods: {
@@ -141,6 +156,31 @@ export default {
           _that.isScrollDone = true;
         }, 100);
       });
+    },
+    initAddIntersectionListener(){
+      this.xOb?this.xOb.disconnect():undefined
+
+      this.xOb = new IntersectionObserver( IntersectionList => {
+        //console.log("正在接受监听的元素长度" + IntersectionList.length)
+            
+              let inView = IntersectionList.filter(item => item.boundingClientRect.top === 0)
+              console.log(inView)
+            },{
+              root:document.querySelectorAll(".full-vw-vh")[0],
+
+            })
+            
+            let elms = []
+
+            this.$slots.default.forEach( vnode => {
+              if(vnode.elm){
+                elms.push(vnode.elm)
+              }
+            })
+            console.log(elms.length + "个元素被渲染了")
+            elms.forEach(elm => {
+                this.xOb.observe(elm)
+            })
     },
     _cloneDeepPropLazy() {
       const ACTIONS = {
@@ -188,6 +228,9 @@ export default {
        this.$slots.default[currentIndex].elm.scrollIntoView({
         behavior: "smooth"
       })
+      /* 改变ink 位置 */
+      this.$refs["tiny-ink"].style.transform = `translateX(-50%) translateY(calc(${currentIndex + 1} * 34px - 50%))`
+    
       /* 点击事件钩子 */
       this.$emit("onClick",this.$slots.default[currentIndex].child,currentIndex)
     }
@@ -240,7 +283,12 @@ export default {
       [
         /* ...this.$slots.default 子节点槽位，直接解构则不是懒加载 */
         ...this._childComponentLazyLoadMarkInitFactory,
-        h("ul", { attrs: { class: "nav-line" } }, _injectLabel())
+        h("ul", { attrs: { class: "nav-line" } },
+        [
+          h("span",{attrs:{class:"tiny-ink"},ref: "tiny-ink"}),
+           ..._injectLabel()
+        ]
+        )
       ]
     );
   }
@@ -252,6 +300,18 @@ export default {
   height: 100vh;
   overflow: hidden;
   scroll-behavior: smooth;
+
+  &::-webkit-scrollbar   
+  {  
+    display: none;
+  }  
+/*   &::-webkit-scrollbar-track {
+    background:transparent;
+  }
+  &::-webkit-scrollbar-thumb{
+    border-radius: 10px;
+    background-color:#95afc0;
+  } */
 }
 ::v-deep .block-wrapper {
   /* 组件默认高度 根据组件本身定义的高度来扩展 */
@@ -266,13 +326,12 @@ export default {
 }
 .nav-line {
 
-  width: 100px;
-  height: 100vh;
-
+  width: 200px;
+  height: auto;
+  padding: 1rem 0;
   position: fixed;
   right: 0;
-  top: 0;
-  border: 1px solid red;
+  top: 20px;
 
   display: flex;
   flex-direction: column;
@@ -282,10 +341,37 @@ export default {
 
   > li {
     display: block;
+    padding: .5rem 1.5rem;
+    height: auto;
+    text-align: left;
+    word-wrap:break-word;
     &:hover {
       cursor: pointer;
     }
     width: 100%;
+  }
+  &::before{
+    content: '';
+    width: 2px;
+    height: 100%;
+    background: #e8e8e8;
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: translateX(-50%) ;
+  }
+  .tiny-ink{
+    width: 1rem;
+    height: 1rem;
+    position: absolute;
+    border: 5px solid #1890ff;
+    border-radius: 50%;
+    background: white;
+    left: 0;
+    top: 0;
+    transform: translateX(-50%) translateY(calc(34px / 2 + 50%));
+    transition: all .5s ease;
+  
   }
 }
 </style>

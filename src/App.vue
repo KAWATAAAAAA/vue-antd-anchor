@@ -12,6 +12,10 @@
       <Header></Header>
       <Body></Body>
       <Footer></Footer>
+      <Footer></Footer>
+      <Footer></Footer>
+      <Footer></Footer>
+      <Footer></Footer>
     </Anchor>
   </div>
 </template>
@@ -23,8 +27,8 @@ import Header from "./components/Header";
 import Body from "./components/Body";
 import Footer from "./components/Footer";
 
-import prettierLog from "./utils/log"
-console.log(prettierLog)
+import prettierLog from "./utils/log";
+console.log(prettierLog);
 export default {
   name: "App",
   components: {
@@ -35,22 +39,22 @@ export default {
   },
   data() {
     return {
-      labelName: ["Header", "Body", "Footer"]
+      labelName: ["Header", "Body", "Footer1", "Footer2", "Footer3", "Footer4", "Footer5"]
     };
   },
-  methods:{
-    handleViewNodeChange(node,index){
-      console.log(node,index)
+  methods: {
+    handleViewNodeChange(node, index) {
+      console.log(node, index);
     },
-    handleLazyLoadAllDone(){
-      prettierLog.default("all done")
+    handleLazyLoadAllDone() {
+      prettierLog.default("all done");
     },
-    handleScrolling(){
-      prettierLog.danger("scrolling...")
+    handleScrolling() {
+      prettierLog.danger("scrolling...");
     },
-    handleScrolled(){
-      prettierLog.success("scrolled")
-    },
+    handleScrolled() {
+      prettierLog.success("scrolled");
+    }
   }
 };
 </script>
